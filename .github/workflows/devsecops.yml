@@ -24,7 +24,7 @@ jobs:
         run: docker build -t juice-shop:latest .
       
       - name: SCA - npm audit
-        run: npm audit --audit-level=critical || true
+        run: npm audit --audit-level=high || true
 
       - name: SAST - semgrep scan
         run: |
