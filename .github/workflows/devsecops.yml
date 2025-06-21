@@ -23,6 +23,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install npm
+        run: npm install -g npm@latest
+
       - name: Build Juice Shop Docker image
         run: docker build -t juice-shop:latest .
 
