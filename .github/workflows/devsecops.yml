@@ -19,7 +19,7 @@ jobs:
         image: docker:dind
         options: --privileged
     env:
-      DOCKER_TLS_CERTDIR: ""  # wyłącz TLS w DinD, ułatwia działanie
+      DOCKER_TLS_CERTDIR: ""
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -43,12 +43,15 @@ jobs:
           done
 
       # --- SCA: Security Check of Dependencies ---
-      - name: Run OWASP Dependency-Check (Java example)
-        uses: dependency-check/github-action@v6
-        with:
-          scan: './'  # jeśli npm albo pip - zmień konfigurację pod siebie
-          format: 'ALL'
-        continue-on-error: true
+      - name: Install OWASP Dependency-Check
+        run: |
+          wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.6.1/dependency-check-8.6.1-release.zip
+          unzip dependency-check-8.6.1-release.zip -d dependency-check
+          chmod +x dependency-check/bin/dependency-check.sh
+
+      - name: Run OWASP Dependency-Check
+        run: |
+          ./dependency-check/bin/dependency-check.sh --project juice-shop --scan ./ --format ALL
 
       # --- SAST: Semgrep static analysis ---
       - name: Run Semgrep SAST scan
@@ -70,7 +73,7 @@ jobs:
           cmd_options: '-t 5 -a -r zap_report.html -I'
 
       - name: Upload OWASP ZAP report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zap-report
           path: zap_report.html
