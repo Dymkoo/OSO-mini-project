@@ -11,9 +11,6 @@ jobs:
     steps:
       - name: Checkout Juice Shop repo
         uses: actions/checkout@v4
-        with:
-          repository: juice-shop/juice-shop
-          ref: main
       
       - name: Set up Node.js
         uses: actions/setup-node@v4
