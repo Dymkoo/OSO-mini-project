@@ -1,19 +1,13 @@
-FROM node:18-alpine
+FROM node:18
 
-# Ustawiamy katalog roboczy
 WORKDIR /app
 
-# Kopiujemy pliki package.json i package-lock.json (lub yarn.lock)
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
-# Instalujemy produkcyjne zależności, nie buildujemy devDependencies
 RUN npm install
 
-# Kopiujemy resztę aplikacji
 COPY . .
 
-# Expose port
 EXPOSE 3000
 
-# Uruchamiamy aplikację
 CMD ["npm", "start"]
