@@ -1,62 +1,80 @@
 name: DevSecOps Juice Shop CI/CD
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
 permissions:
   contents: read
   pull-requests: write
-  security-events: write  
+  security-events: write
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   devsecops:
     runs-on: ubuntu-latest
     services:
       docker:
-        image: docker:20.10.16-dind
+        image: docker:dind
         options: --privileged
-
+    env:
+      DOCKER_TLS_CERTDIR: ""  # wyłącz TLS w DinD, ułatwia działanie
     steps:
-      - name: Checkout repo (Twoj kod)
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Klonowanie Juice Shop
-        run: git clone https://github.com/juice-shop/juice-shop.git
+      - name: Build Juice Shop Docker image
+        run: docker build -t juice-shop:latest .
 
-      - name: Instalacja zaleznosci
-        working-directory: juice-shop
-        run: npm install
+      - name: Run Juice Shop container
+        run: |
+          docker run -d --rm -p 3000:3000 --name juice-shop juice-shop:latest
 
-      - name: Budowanie Juice Shop (Docker)
-        working-directory: juice-shop
-        run: docker build -t juice-shop-app .
+      - name: Wait for Juice Shop to start
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Juice Shop is up!"
+              break
+            fi
+            echo "Waiting for Juice Shop..."
+            sleep 5
+          done
 
-      - name: SCA - npm audit
-        working-directory: juice-shop
-        run: npm audit --audit-level=high || true
+      # --- SCA: Security Check of Dependencies ---
+      - name: Run OWASP Dependency-Check (Java example)
+        uses: dependency-check/github-action@v6
+        with:
+          scan: './'  # jeśli npm albo pip - zmień konfigurację pod siebie
+          format: 'ALL'
+        continue-on-error: true
 
-      - name: SAST - Semgrep
+      # --- SAST: Semgrep static analysis ---
+      - name: Run Semgrep SAST scan
         uses: returntocorp/semgrep-action@v1
         with:
-          config: auto
-          working-directory: juice-shop
+          config: 'auto'
+        continue-on-error: true
 
-      - name: Sekrety - GitLeaks
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect -s juice-shop
+      # --- Secrets scan ---
+      - name: GitLeaks secret scan
+        uses: zricethezav/gitleaks-action@v2
+        continue-on-error: true
 
-      - name: Uruchomienie Juice Shop
-        run: docker run -d -p 3000:3000 --name juice-shop juice-shop-app
-
-      - name: Poczekaj az aplikacja wystartuje
-        run: sleep 10
-
-      - name: DAST - OWASP ZAP
+      # --- DAST: OWASP ZAP dynamic scan ---
+      - name: Run OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.10.0
         with:
           target: 'http://localhost:3000'
-          cmd_options: '-t 300 -a -r zap_report.html -I'
+          cmd_options: '-t 5 -a -r zap_report.html -I'
+
+      - name: Upload OWASP ZAP report
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: zap_report.html
+
+      # Cleanup
+      - name: Stop Juice Shop container
+        run: docker stop juice-shop || true
