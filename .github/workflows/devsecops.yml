@@ -27,9 +27,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
-      - name: Install npm
-        run: npm install
 
       - name: Build Juice Shop Docker image
         run: docker build -t juice-shop:latest .
