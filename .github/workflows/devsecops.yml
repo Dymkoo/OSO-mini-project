@@ -28,7 +28,7 @@ jobs:
         run: docker build -t juice-shop:latest .
 
       - name: Run Juice Shop container
-        run: docker run -d --rm -p 3000:3000 --name juice-shop bkimminich/juice-shop:latest
+        run: docker run -d --rm -p 3000:3000 --name juice-shop juice-shop:latest
 
       - name: Wait for Juice Shop to start
         run: |
