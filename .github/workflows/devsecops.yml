@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write  
+
 jobs:
   devsecops:
     runs-on: ubuntu-latest
@@ -15,13 +20,13 @@ jobs:
         options: --privileged
 
     steps:
-      - name: Checkout repo (Twój kod)
+      - name: Checkout repo (Twoj kod)
         uses: actions/checkout@v3
 
       - name: Klonowanie Juice Shop
         run: git clone https://github.com/juice-shop/juice-shop.git
 
-      - name: Instalacja zależności
+      - name: Instalacja zaleznosci
         working-directory: juice-shop
         run: npm install
 
@@ -47,10 +52,11 @@ jobs:
       - name: Uruchomienie Juice Shop
         run: docker run -d -p 3000:3000 --name juice-shop juice-shop-app
 
-      - name: Poczekaj aż aplikacja wystartuje
+      - name: Poczekaj az aplikacja wystartuje
         run: sleep 10
 
       - name: DAST - OWASP ZAP
         uses: zaproxy/action-baseline@v0.10.0
         with:
           target: 'http://localhost:3000'
+          cmd_options: '-t 300 -a -r zap_report.html --exitcode 0'
