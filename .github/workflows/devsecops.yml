@@ -26,15 +26,14 @@ jobs:
       - name: SCA - npm audit
         run: npm audit --audit-level=high || true
 
+      - name: Install semgrep
+        run: pip install semgrep
+        
       - name: SAST - semgrep scan
-        run: |
-          pip install semgrep
-          semgrep scan --config auto
+        run: semgrep scan --config auto
 
       - name: Secrets Scan - gitleaks
         uses: gitleaks/gitleaks-action@v2.3.9
-        with:
-          config-path: ""
         continue-on-error: true
 
       - name: Run Juice Shop container
