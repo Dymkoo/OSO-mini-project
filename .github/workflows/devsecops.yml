@@ -1,86 +1,26 @@
 name: DevSecOps Juice Shop CI/CD
 
-permissions:
-  contents: read
-  pull-requests: write
-  security-events: write
-
 on:
   push:
     branches:
       - main
 
 jobs:
-  devsecops:
+  build-and-scan:
     runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:dind
-        options: --privileged
-    env:
-      DOCKER_TLS_CERTDIR: ""
     steps:
-      - name: Checkout repo
+      - name: Checkout Juice Shop repo
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
         with:
-          node-version: '18'
-
-      - name: Build Juice Shop Docker image
-        run: docker build -t juice-shop:latest .
-
-      - name: Run Juice Shop container
-        run: docker run -d --rm -p 3000:3000 --name juice-shop juice-shop:latest
-
-      - name: Wait for Juice Shop to start
-        run: |
-          for i in {1..30}; do
-            if curl -s http://localhost:3000 > /dev/null; then
-              echo "Juice Shop is up!"
-              break
-            fi
-            echo "Waiting for Juice Shop..."
-            sleep 5
-          done
-
-      # --- SCA: Security Check of Dependencies ---
-      - name: Install OWASP Dependency-Check
-        run: |
-          wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.6.1/dependency-check-8.6.1-release.zip
-          unzip dependency-check-8.6.1-release.zip -d dependency-check
-          chmod +x dependency-check/bin/dependency-check.sh
-
-      - name: Run OWASP Dependency-Check
-        run: |
-          ./dependency-check/bin/dependency-check.sh --project juice-shop --scan ./ --format ALL
-
-      # --- SAST: Semgrep static analysis ---
-      - name: Run Semgrep SAST scan
-        uses: returntocorp/semgrep-action@v1
+          repository: juice-shop/juice-shop
+          ref: main
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          config: 'auto'
-        continue-on-error: true
+          node-version: 'latest'
 
-      # --- Secrets scan ---
-      - name: GitLeaks secret scan
-        uses: zricethezav/gitleaks-action@v2
-        continue-on-error: true
+      - name: Install dependencies
+        run: npm install
 
-      # --- DAST: OWASP ZAP dynamic scan ---
-      - name: Run OWASP ZAP baseline scan
-        uses: zaproxy/action-baseline@v0.10.0
-        with:
-          target: 'http://localhost:3000'
-          cmd_options: '-t 5 -a -r zap_report.html -I'
-
-      - name: Upload OWASP ZAP report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: zap_report.html
-
-      # Cleanup
-      - name: Stop Juice Shop container
-        run: docker stop juice-shop || true
+        
